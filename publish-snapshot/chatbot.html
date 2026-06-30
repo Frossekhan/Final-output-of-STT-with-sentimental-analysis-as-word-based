@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 600px;
+            height: 90vh;
+            max-height: 800px;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            word-wrap: break-word;
+            font-size: 14px;
+        }
+
+        .user .message-content {
+            background: #667eea;
+            color: white;
+            border-radius: 15px 15px 0 15px;
+        }
+
+        .bot .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px 15px 15px 0;
+        }
+
+        .message-avatar {
+            font-size: 24px;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user .message-avatar {
+            order: 2;
+        }
+
+        .bot .message-avatar {
+            order: 1;
+        }
+
+        .loading {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .loading span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: pulse 1.4s infinite;
+        }
+
+        .loading span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 0 0 15px 15px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #audioInput {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        .upload-btn:active {
+            transform: scale(0.95);
+        }
+
+        .file-name {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .sending-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .sending-btn:hover:not(:disabled) {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        .sending-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .language-info {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mic-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .mic-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .mic-btn.recording {
+            background: #ff3333;
+            animation: recordPulse 1s infinite;
+        }
+
+        @keyframes recordPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(255, 51, 51, 0);
+            }
+        }
+
+        .timer {
+            font-size: 12px;
+            color: #ff6b6b;
+            font-weight: bold;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🎙️ Audio Transcriber</h1>
+            <p>Upload audio files to transcribe into text</p>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="info-box">
+                        👋 Hi! Upload an audio file and I'll transcribe it for you. Supported formats: MP3, WAV, M4A, FLAC, etc.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input">
+            <div class="input-group">
+                <input type="file" id="audioInput" accept="audio/*">
+                <div class="button-group">
+                    <button class="mic-btn" id="micBtn" title="Record from microphone">🎤</button>
+                    <button class="upload-btn" id="uploadBtn" title="Upload audio file">📁</button>
+                </div>
+                <div class="file-name" id="fileName"></div>
+                <div class="timer" id="timer" style="display:none;"></div>
+            </div>
+            <button class="sending-btn" id="sendBtn" disabled title="Send audio">▶</button>
+        </div>
+    </div>
+
+    <script>
+        const uploadBtn = document.getElementById('uploadBtn');
+        const micBtn = document.getElementById('micBtn');
+        const audioInput = document.getElementById('audioInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const fileName = document.getElementById('fileName');
+        const timer = document.getElementById('timer');
+
+        let selectedFile = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingStartTime = null;
+        let recordingInterval = null;
+        let isRecording = false;
+
+        // Upload button
+        uploadBtn.addEventListener('click', () => {
+            audioInput.click();
+        });
+
+        audioInput.addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                fileName.textContent = selectedFile.name;
+                sendBtn.disabled = false;
+                micBtn.disabled = false;
+            }
+        });
+
+        // Microphone recording
+        micBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    isRecording = true;
+
+                    micBtn.classList.add('recording');
+                    micBtn.textContent = '⏹️';
+                    micBtn.title = 'Stop recording';
+                    uploadBtn.disabled = true;
+                    sendBtn.disabled = true;
+
+                    recordingStartTime = Date.now();
+                    timer.style.display = 'block';
+                    updateTimer();
+                    recordingInterval = setInterval(updateTimer, 100);
+
+                    mediaRecorder.addEventListener('dataavailable', (e) => {
+                        audioChunks.push(e.data);
+                    });
+
+                    mediaRecorder.addEventListener('stop', () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        selectedFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+                        fileName.textContent = 'Recording: ' + formatDuration();
+                        sendBtn.disabled = false;
+                    });
+
+                    mediaRecorder.start();
+                } catch (error) {
+                    alert('Microphone access denied: ' + error.message);
+                }
+            } else {
+                isRecording = false;
+                mediaRecorder.stop();
+                micBtn.classList.remove('recording');
+                micBtn.textContent = '🎤';
+                micBtn.title = 'Record from microphone';
+                uploadBtn.disabled = false;
+                timer.style.display = 'none';
+                clearInterval(recordingInterval);
+
+                // Stop all tracks
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            timer.textContent = `⏱️ ${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDuration() {
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        sendBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            // Show user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            const isRecorded = selectedFile.name === 'recording.webm';
+            userMessage.innerHTML = `
+                <div class="message-avatar">👤</div>
+                <div class="message-content">
+                    ${isRecorded ? '🎤 Recording:' : '📤 Uploading:'} <strong>${isRecorded ? formatDuration() : selectedFile.name}</strong>
+                </div>
+            `;
+            chatMessages.appendChild(userMessage);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            sendBtn.disabled = true;
+            fileName.textContent = '';
+
+            // Show loading message
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'message bot';
+            loadingMessage.id = 'loadingMessage';
+            loadingMessage.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="loading">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div style="margin-top: 8px; color: #666; font-size: 12px;">Transcribing audio...</div>
+                </div>
+            `;
+            chatMessages.appendChild(loadingMessage);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', selectedFile);
+
+                const response = await fetch('http://127.0.0.1:8000/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const loadingMsg = document.getElementById('loadingMessage');
+                if (loadingMsg) loadingMsg.remove();
+
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Show result
+                const botMessage = document.createElement('div');
+                botMessage.className = 'message bot';
+
+                botMessage.innerHTML = `
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <div style="font-weight: bold; color: #667eea; margin-bottom: 15px; font-size: 14px;">✅ Transcription Complete</div>
+                        
+                        <div style="background: #f0f4ff; padding: 15px; border-radius: 10px; margin: 12px 0; border-left: 4px solid #667eea;">
+                            <div style="font-size: 13px; color: #555; margin-bottom: 8px;">📝 <strong>Transcribed Text:</strong></div>
+                            <div style="background: white; padding: 12px; border-radius: 6px; font-size: 14px; line-height: 1.6; color: #333; font-weight: 500;">
+                                ${data.text || '(No speech detected)'}
+                            </div>
+                        </div>
+
+                        <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin: 12px 0; border-left: 3px solid #4caf50;">
+                            <div style="font-size: 12px; color: #2e7d32;"><strong>🌍 Language:</strong> ${data.language.toUpperCase()} (${(data.language_probability * 100).toFixed(1)}% confidence)</div>
+                            <div style="font-size: 12px; color: #2e7d32; margin-top: 5px;"><strong>⏱️ Duration:</strong> ${data.duration.toFixed(2)}s (after VAD: ${data.duration_after_vad.toFixed(2)}s)</div>
+                        </div>
+
+                        ${data.segments && data.segments.length > 0 ? `
+                        <div style="margin-top: 15px; font-size: 13px; color: #555;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">📊 Segments:</div>
+                            <div style="background: #f5f5f5; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+                                ${data.segments.map((seg, i) => `
+                                    <div style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; font-size: 12px;">
+                                        <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">
+                                            ${Math.floor(seg.start)}s - ${Math.floor(seg.end)}s
+                                        </span>
+                                        <div style="margin-top: 5px; color: #333;">${seg.text}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                chatMessages.appendChild(botMessage);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                selectedFile = null;
+                audioInput.value = '';
+                fileName.textContent = '';
+
+            } catch (error) {
+                const loadingMsg = document.getElementById('loadingMessage');
+                if (loadingMsg) loadingMsg.remove();
+
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message bot';
+                errorMessage.innerHTML = `
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content" style="background: #fee; color: #c33;">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+                chatMessages.appendChild(errorMessage);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                selectedFile = null;
+                audioInput.value = '';
+                fileName.textContent = '';
+            }
+
+            sendBtn.disabled = false;
+        });
+
+        // Auto-scroll to latest message
+        const observer = new MutationObserver(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        observer.observe(chatMessages, { childList: true });
+    </script>
+</body>
+</html>

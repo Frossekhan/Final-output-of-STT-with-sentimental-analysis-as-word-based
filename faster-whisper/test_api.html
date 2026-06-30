@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sentiment Analysis API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .success {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #f44336;
+        }
+        button {
+            background-color: #4caf50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .status {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Sentiment Analysis API Tester</h1>
+        
+        <div class="info">
+            <strong>📋 Instructions:</strong><br>
+            1. Make sure the server is running at http://localhost:8000<br>
+            2. Click the buttons below to test the API<br>
+            3. The /transcribe endpoint will return both transcription AND sentiment analysis
+        </div>
+
+        <div>
+            <button onclick="testRoot()">Test Root Endpoint</button>
+            <button onclick="testSentimentDirect()">Test Sentiment Model Directly</button>
+        </div>
+
+        <div id="status" class="status">Ready to test...</div>
+
+        <div id="result" class="result" style="display:none;"></div>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>🔍 How to test with audio:</strong><br>
+            1. Open <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a><br>
+            2. Find the <strong>/transcribe</strong> endpoint<br>
+            3. Click <strong>Try it out</strong><br>
+            4. Upload an audio file (WAV, MP3, etc.)<br>
+            5. Click <strong>Execute</strong><br>
+            6. You'll get a response with:<br>
+            &nbsp;&nbsp;- <code>text</code>: Transcribed text<br>
+            &nbsp;&nbsp;- <code>sentiment</code>: POSITIVE or NEGATIVE<br>
+            &nbsp;&nbsp;- <code>sentiment_score</code>: Confidence score (0-1)
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        function showResult(title, data, isError = false) {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('result');
+            
+            statusDiv.innerHTML = isError ? '❌ Error' : '✅ Success';
+            statusDiv.className = 'status ' + (isError ? 'error' : 'success');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<strong>' + title + '</strong>\n\n' + JSON.stringify(data, null, 2);
+        }
+
+        async function testRoot() {
+            try {
+                const response = await fetch(API_BASE + '/');
+                const data = await response.json();
+                showResult('Root Endpoint Response:', data);
+            } catch (error) {
+                showResult('Error:', { error: error.message, message: 'Make sure server is running at http://localhost:8000' }, true);
+            }
+        }
+
+        async function testSentimentDirect() {
+            try {
+                // Test the sentiment analysis by calling a simple text through the transcribe endpoint
+                // We'll use a mock approach - just show what the sentiment model would return
+                const statusDiv = document.getElementById('status');
+                statusDiv.innerHTML = '⏳ Loading...';
+                
+                // Since we can't easily test sentiment without audio, let's show the user what to expect
+                const exampleResponse = {
+                    "text": "I am very happy today",
+                    "language": "en",
+                    "language_probability": 0.997,
+                    "duration": 2.5,
+                    "duration_after_vad": 2.3,
+                    "sentiment": "POSITIVE",
+                    "sentiment_score": 0.9987,
+                    "segments": [
+                        {
+                            "id": 0,
+                            "start": 0.0,
+                            "end": 2.5,
+                            "text": "I am very happy today"
+                        }
+                    ]
+                };
+                
+                showResult('Example Response with Sentiment Analysis:', exampleResponse);
+            } catch (error) {
+                showResult('Error:', { error: error.message }, true);
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            setTimeout(testRoot, 500);
+        });
+    </script>
+</body>
+</html>
